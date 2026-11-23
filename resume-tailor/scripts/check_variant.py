@@ -249,15 +249,15 @@ def plain(s):
 
 def check_mirror(root):
     for fname, has_header in MIRRORED:
-        rt = os.path.join(root, "resume-tailor/references", fname)
-        cl = os.path.join(root, "cover-letter-generator/references", fname)
+        rt = os.path.join(root, "resume-tailor", "references", fname)
+        cl = os.path.join(root, "cover-letter-generator", "references", fname)
         if not (os.path.exists(rt) and os.path.exists(cl)):
             record("WARN", "mirror", f"one {fname} copy is missing")
             continue
-        r_txt = open(rt, encoding="utf-8").read()
+        r_txt = open(rt, encoding="utf-8").read().replace("\r\n", "\n")
         if has_header:
             r_txt = re.sub(r"^<!--.*?-->\s*\n", "", r_txt, count=1, flags=re.S)
-        c_txt = open(cl, encoding="utf-8").read()
+        c_txt = open(cl, encoding="utf-8").read().replace("\r\n", "\n")
         if has_header:
             c_txt = re.sub(r"^<!--.*?-->\s*\n", "", c_txt, count=1, flags=re.S)
         same = r_txt == c_txt
@@ -284,7 +284,7 @@ def norm_metric(m):
 
 
 def run(cmd, cwd):
-    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace")
 
 
 def main():

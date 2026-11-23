@@ -47,7 +47,7 @@ resume-tailor/
 
 - **Python 3.10+** (standard library only; no third-party Python packages required)
 - **LaTeX (`pdflatex`)** and **Poppler utilities (`pdfinfo`, `pdftotext`)**:
-  - **Ubuntu / Debian:**
+  - **Ubuntu / Debian (or WSL):**
     ```bash
     sudo apt-get install texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended poppler-utils
     ```
@@ -56,6 +56,12 @@ resume-tailor/
     brew install --cask mactex-no-gui
     brew install poppler
     ```
+  - **Windows (PowerShell via `winget` or `scoop`):**
+    ```powershell
+    winget install MiKTeX.MiKTeX oschwartz10612.Poppler
+    # Or with Scoop: scoop install latex poppler
+    ```
+    *(Note: In MiKTeX Console, set "Install missing packages on-the-fly" to **Yes** so `pdflatex` can run non-interactively.)*
 
 ---
 
@@ -75,6 +81,7 @@ resume-tailor/
        --resume ~/Documents/resumes/<Your_Name>_Resume.tex \
        --write-evidence-bank --force
      ```
+     *(On Windows PowerShell, use `python` instead of `python3`.)*
    - Review `resume-tailor/config.json` (`skills_only`, `off_surface`, `do_not_write`) and add your scope ceilings in `resume-tailor/references/evidence-bank.md`.
 
 3. **Verify your setup and test the mechanical gate:**
@@ -84,10 +91,16 @@ resume-tailor/
    ```
 
 4. **Install the skill into Claude Code:**
-   ```bash
-   mkdir -p ~/.claude/skills
-   ln -s "$(pwd)/resume-tailor" ~/.claude/skills/resume-tailor
-   ```
+   - **Linux / macOS / WSL:**
+     ```bash
+     mkdir -p ~/.claude/skills
+     ln -s "$(pwd)/resume-tailor" ~/.claude/skills/resume-tailor
+     ```
+   - **Windows (PowerShell):**
+     ```powershell
+     New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null
+     New-Item -ItemType Junction -Path "$HOME\.claude\skills\resume-tailor" -Target "$PWD\resume-tailor"
+     ```
 
 5. **Use it in Claude Code:**
    Share any job posting URL or paste a job description:

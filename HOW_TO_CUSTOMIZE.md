@@ -91,9 +91,16 @@ python3 resume-tailor/scripts/check_variant.py --check-setup
 python3 resume-tailor/scripts/check_variant.py ~/Documents/resumes/Your_Name_Resume.tex
 ```
 
-Once both pass, symlink the skill into Claude Code:
+Once both pass, link the skill into Claude Code:
 
-```bash
-mkdir -p ~/.claude/skills
-ln -s "$(pwd)/resume-tailor" ~/.claude/skills/resume-tailor
-```
+- **Linux / macOS / WSL:**
+  ```bash
+  mkdir -p ~/.claude/skills
+  ln -s "$(pwd)/resume-tailor" ~/.claude/skills/resume-tailor
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  New-Item -ItemType Directory -Force "$HOME\.claude\skills" | Out-Null
+  New-Item -ItemType Junction -Path "$HOME\.claude\skills\resume-tailor" -Target "$PWD\resume-tailor"
+  ```
+  *(On Windows PowerShell, run scripts with `python` instead of `python3`.)*
