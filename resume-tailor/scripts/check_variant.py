@@ -1,122 +1,75 @@
 #!/usr/bin/env python3
 """Mechanical gates for a tailored resume variant (gates 3 and 4 in bullet-craft.md).
 
-Also fails on: en-dash date ranges, garbled glyphs, an unprinted email, and an
-unescaped % after a figure (text-layer ATS checks), and on the scope lists
-below (skills-only terms in prose, tech off the verified surface, the evidence
-bank's do-not-write phrases).
+Reads candidate-specific settings from resume-tailor/config.json (or
+~/.config/resume-tailor/config.json, or --config), falling back to
+config.example.json defaults so you never have to edit Python code to
+customize the skill.
 
 Usage:
   check_variant.py [VARIANT.tex] [--base BASE.tex] [--keywords KW.txt]
-                   [--no-compile] [--mirror SKILLS_DIR] [--max-pages N]
+                   [--config CONFIG.json] [--no-compile] [--mirror SKILLS_DIR]
+                   [--max-pages N] [--check-setup]
 
-  --base       canonical base .tex; every metric in it must survive in the variant
-  --keywords   one JD keyword per line; each must appear in the extracted PDF text.
-               Lines starting with # are skipped; "# gap: X" records a JD keyword
-               with no evidence (a coverage gap), "# ask: X" one that may be real
-               but unrecorded (a question for the candidate), and the report lists both
-  --no-compile skip pdflatex (use the existing PDF next to the .tex)
-  --mirror     skills root containing resume-tailor/ and cover-letter-generator/;
-               verifies the mirrored reference files match. Runs alone when no
-               VARIANT.tex is given
-  --max-pages  maximum allowed PDF page count (default: MAX_PAGES = 2)
+  --base         canonical base .tex (defaults to base_resume in config.json)
+  --keywords     one JD keyword per line; each must appear in the extracted PDF text.
+                 Lines starting with # are skipped; "# gap: X" records a JD keyword
+                 with no evidence (a coverage gap), "# ask: X" one that may be real
+                 but unrecorded (a question for the candidate), and the report lists both
+  --config       path to config.json
+  --no-compile   skip pdflatex (use the existing PDF next to the .tex)
+  --mirror       skills root containing resume-tailor/ and cover-letter-generator/;
+                 verifies the mirrored reference files match
+  --max-pages    maximum allowed PDF page count (overrides config.json max_pages)
+  --check-setup  verify system tools (pdflatex, pdfinfo, pdftotext), config.json,
+                 base_resume, and evidence-bank.md
 
 Exit code 0 = all hard gates pass, 1 = at least one FAIL. WARN lines are for
 judgment and don't fail the run.
 """
 import argparse
+import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 
-# ==============================================================================
-# CANDIDATE CUSTOMIZATION SECTION
-# Edit the constants below to match your own evidence bank and resume rules.
-# See HOW_TO_CUSTOMIZE.md for a step-by-step walkthrough.
-# ==============================================================================
+SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Maximum allowed pages for a compiled PDF resume variant (usually 1 or 2).
-MAX_PAGES = 2
-
-# 1. SKILLS_ONLY: Technologies you have light, scripting-only, or personal-project
-#    exposure to. They are allowed in the Technical Proficiencies table, but FAIL
-#    if they appear in a work-experience bullet or the summary.
-SKILLS_ONLY = re.compile(
-    r"\b(Python|Cypress|Storybook|Docker|GitHub Actions|Astro|Tailwind|design tokens|"
-    r"Confluence|PHP|Reactive Forms|Module Federation|SCSS|Jira|Linux|Git|Copilot|Kafka)\b",
-    re.I,
-)
-
-# 2. OFF_SURFACE: Technologies you do NOT have experience with. If an LLM
-#    hallucinates any of these anywhere on the resume, the gate FAILS.
-OFF_SURFACE = re.compile(
-    r"\b(Vite|Vitest|Redux|Kubernetes|React Native|Flutter|"
-    r"Golang|NestJS|Spring Boot|Sentry|TanStack|Zustand|Turborepo|esbuild|Rollup|"
-    r"NVDA|JAWS|Section 508|VPAT|MUI|Material UI|Shopify|(?-i:Relay))\b|\bWCAG\s+\d",
-    re.I,
-)
-
-# 3. DO_NOT_WRITE: Specific phrases, internal codenames, or scope overreaches
-#    from your evidence bank that must never appear on the resume.
-#    Format: (regex_pattern, explanation_shown_on_failure)
-DO_NOT_WRITE = [
-    (r"\bProjectTitan\b",
-     'internal product codename; write "enterprise billing platform"'),
-    (r"\bled a team of\b|\bmanag(?:ed|ing) (?:a team|\d+|three)\b",
-     'team ceiling is "led frontend", never managed or led a team of'),
-    (r"\barchitected (?:the|a|its) (?:[\w-]+ ){0,2}(?:platform|architecture)\b",
-     '"architected" covers only the specific components built, never the broader platform'),
-    (r"\bled the (?:platform|framework|micro-frontend) migration\b",
-     "the migration was a senior-led platform initiative"),
-]
-
-# 4. CUSTOM_SCOPE_FAILS: Additional regex checks against the flattened body text
-#    for candidate-specific metric or years-of-experience rules.
-#    Format: (regex_pattern, gate_name, failure_message)
-NUM = r"(?:\d+\+?|one|two|three|four|five|six)"
-CUSTOM_SCOPE_FAILS = [
-    # Example: prevent attaching full company tenure to a secondary language (Java)
-    (rf"\b{NUM}\s+years?\s+(?:of|in|with|at|across|building|shipping|writing|using|on)\s+"
-     rf"(?:[\w/+#.]+[,\s]+){{0,4}}Java\b|\bJava\b[^.;]{{0,25}}\b{NUM}\+?\s+years?\b",
-     "scope",
-     "years figure attached to Java (part-time only; never attach total tenure)"),
-    # Example: prevent writing a relative percentage lift as percentage points
-    (r"\b12[\s-]*(?:pp|(?:percentage[\s-]+)?points?)\b",
-     "scope",
-     "12% written as points (it's a relative lift)"),
-    # Example: require a qualifier on a skills-only language
-    (r"(?-i:\bPython\b)(?! \(scripting\))",
-     "scope",
-     "'Python' must be written as 'Python (scripting)'"),
-    # Example: prevent inventing a baseline for a metric whose baseline wasn't recorded
-    (r"\bLCP\b[^.;]{0,40}\bfrom\s+~?\d",
-     "scope",
-     "p75 LCP written from a baseline (baseline was not recorded)"),
-]
-
-# 5. TAGLINE_PARTS: Approved craft and domain phrases for parts 2 and 3 of the
-#    centered sub-heading under \sectionhead{<Role Title>}. Keep in sync with
-#    references/bullet-craft.md.
-TAGLINE_PARTS = {
-    "AI-Assisted Development", "Test Automation & Quality", "Test Automation & CI/CD",
-    "Web Performance & Accessibility", "Web Performance & Reliability", "Web Performance",
-    "Web Performance & Architecture", "End-to-End Product Features", "Frontend Platform & DX",
-    "Product Experimentation", "A/B Experimentation & Funnels", "Observability & Reliability",
-    "Code Review & Mentorship", "API & Service Development", "Accessibility & UI Quality",
-    "Feature-Flag Rollouts", "Growth & Experimentation", "Frontend Platform",
-    "Payments Product Engineering", "Onboarding & Multi-Step Forms",
-    "Distributed Systems & Scalability", "Cloud Infrastructure & DevOps",
-    "Data Pipelines & Analytics",
+DEFAULT_CONFIG = {
+    "base_resume": "~/Documents/resumes/Candidate_Name_Resume.tex",
+    "output_dir": "~/Documents/resumes",
+    "variant_filename": "Candidate_Name_resume.tex",
+    "max_pages": 2,
+    "skills_only": [
+        "Python", "Cypress", "Storybook", "Docker", "GitHub Actions", "Astro",
+        "Tailwind", "design tokens", "Confluence", "PHP", "Reactive Forms",
+        "Module Federation", "SCSS", "Jira", "Linux", "Git", "Copilot", "Kafka",
+    ],
+    "off_surface": [
+        "Vite", "Vitest", "Redux", "Kubernetes", "React Native", "Flutter",
+        "Golang", "NestJS", "Spring Boot", "Sentry", "TanStack", "Zustand",
+        "Turborepo", "esbuild", "Rollup", "NVDA", "JAWS", "Section 508",
+        "VPAT", "MUI", "Material UI", "Shopify", "Relay",
+    ],
+    "do_not_write": [],
+    "custom_scope_fails": [],
+    "tagline_parts": [
+        "AI-Assisted Development", "Test Automation & Quality", "Test Automation & CI/CD",
+        "Web Performance & Accessibility", "Web Performance & Reliability", "Web Performance",
+        "Web Performance & Architecture", "End-to-End Product Features", "Frontend Platform & DX",
+        "Product Experimentation", "A/B Experimentation & Funnels", "Observability & Reliability",
+        "Code Review & Mentorship", "API & Service Development", "Accessibility & UI Quality",
+        "Feature-Flag Rollouts", "Growth & Experimentation", "Frontend Platform",
+        "Payments Product Engineering", "Onboarding & Multi-Step Forms",
+        "Distributed Systems & Scalability", "Cloud Infrastructure & DevOps",
+        "Data Pipelines & Analytics",
+    ],
+    "noun_opening_allowlist": ["Sole technical owner"],
+    "excluded_companies": [],
 }
 
-# 6. NOUN_OPENING_ALLOWLIST: Bullet prefixes allowed to start with a noun phrase
-#    instead of a past-tense verb.
-NOUN_OPENING_ALLOWLIST = (
-    "Sole technical owner",
-)
-
-# 7. MISSPELLED: Case-sensitive brand/technology spellings.
 MISSPELLED = [
     (r"\bGithub\b", "GitHub"),
     (r"\bGitlab\b", "GitLab"),
@@ -131,7 +84,6 @@ MISSPELLED = [
     (r"\bPostgresql\b", "PostgreSQL"),
 ]
 
-# 8. BANLIST: AI cliches and vague resume filler (bullet-craft.md "Banlist").
 BANLIST = [
     "spearheaded", "spearheading", "leveraged", "leverage", "leveraging",
     "utilized", "utilize", "utilizing", "responsible for",
@@ -139,10 +91,6 @@ BANLIST = [
     "world-class", "synergy", "synergies", "proven track record", "results-driven",
     "dynamic", "innovative", "best-in-class", "drove impact", "move the needle",
 ]
-
-# ==============================================================================
-# END OF CANDIDATE CUSTOMIZATION SECTION
-# ==============================================================================
 
 HEADINGS = re.compile(
     r"^\s*(summary|professional summary|core competencies|professional experience|"
@@ -188,6 +136,80 @@ def record(level, gate, msg):
     results.append((level, gate, msg))
 
 
+def load_config(explicit_path=None):
+    cfg = dict(DEFAULT_CONFIG)
+    candidates = [
+        explicit_path,
+        os.environ.get("RESUME_TAILOR_CONFIG"),
+        os.path.join(SKILL_DIR, "config.json"),
+        os.path.expanduser("~/.config/resume-tailor/config.json"),
+        os.path.join(SKILL_DIR, "config.example.json"),
+    ]
+    loaded_from = None
+    for p in candidates:
+        if p and os.path.exists(os.path.expanduser(p)):
+            loaded_from = os.path.expanduser(p)
+            with open(loaded_from, encoding="utf-8") as f:
+                user_cfg = json.load(f)
+            cfg.update({k: v for k, v in user_cfg.items() if not k.startswith("_")})
+            break
+    cfg["_loaded_from"] = loaded_from
+    return cfg
+
+
+def compile_word_list_regex(words):
+    cleaned = [w.strip() for w in (words or []) if w and w.strip()]
+    if not cleaned:
+        return None
+    escaped = "|".join(re.escape(w) for w in cleaned)
+    return re.compile(rf"\b({escaped})\b", re.I)
+
+
+def check_setup(cfg):
+    print("=== resume-tailor setup check ===")
+    cfg_path = cfg.get("_loaded_from")
+    is_example = cfg_path and cfg_path.endswith("config.example.json")
+    if cfg_path and not is_example:
+        record("PASS", "setup", f"config loaded from {cfg_path}")
+    else:
+        record(
+            "WARN",
+            "setup",
+            f"no config.json found (using {cfg_path or 'built-in defaults'}); "
+            "run `python3 scripts/init_profile.py --resume /path/to/Resume.tex` or copy config.example.json to config.json",
+        )
+
+    for tool in ("pdflatex", "pdfinfo", "pdftotext"):
+        found = shutil.which(tool)
+        record(
+            "PASS" if found else "FAIL",
+            "setup",
+            f"{tool}: {found}" if found else f"{tool} not found on PATH (install texlive & poppler-utils)",
+        )
+
+    base = os.path.expanduser(cfg.get("base_resume") or "")
+    if base and os.path.exists(base):
+        record("PASS", "setup", f"base_resume found: {base}")
+    else:
+        record("WARN", "setup", f"base_resume not found at '{base}' (update base_resume in config.json)")
+
+    bank = os.path.join(SKILL_DIR, "references", "evidence-bank.md")
+    if os.path.exists(bank):
+        txt = open(bank, encoding="utf-8").read()
+        has_placeholder = "CUSTOMIZE THIS FILE" in txt or "Company A — Role / Team" in txt
+        record(
+            "WARN" if has_placeholder else "PASS",
+            "setup",
+            "evidence-bank.md still contains template placeholders"
+            if has_placeholder
+            else "evidence-bank.md exists and is customized",
+        )
+    else:
+        record("FAIL", "setup", f"missing {bank}")
+
+    return report()
+
+
 def strip_comments(tex):
     return "\n".join(re.sub(r"(?<!\\)%.*$", "", ln) for ln in tex.splitlines())
 
@@ -208,13 +230,11 @@ def items_of(body):
 
 
 def summary_of(body):
-    # the paragraph between the tagline's \endgroup and the next \sectionhead
     m = re.search(r"\\sectionhead\{[^}]*\}.*?\\endgroup(.*?)\\sectionhead", body, re.S)
     return " ".join(m.group(1).split()) if m else ""
 
 
 def skill_rows(body):
-    """The skills table, one row per line."""
     return "\n".join(
         " ".join(r.split())
         for tab in re.findall(r"\\begin\{tabularx\}.*?\\end\{tabularx\}", body, re.S)
@@ -249,7 +269,6 @@ def check_mirror(root):
 
 
 def metric_src(body):
-    # the base writes ~ as \til and en-dashes as --; normalize before matching
     return (
         body.replace("\\til ", "~")
         .replace("\\til", "~")
@@ -273,16 +292,45 @@ def main():
     ap.add_argument("tex", nargs="?")
     ap.add_argument("--base")
     ap.add_argument("--keywords")
+    ap.add_argument("--config")
     ap.add_argument("--no-compile", action="store_true")
     ap.add_argument("--mirror")
-    ap.add_argument("--max-pages", type=int, default=MAX_PAGES)
+    ap.add_argument("--max-pages", type=int)
+    ap.add_argument("--check-setup", action="store_true")
     a = ap.parse_args()
+
+    cfg = load_config(a.config)
+    if a.check_setup:
+        return check_setup(cfg)
+
     if not a.tex and not a.mirror:
-        ap.error("give a VARIANT.tex, --mirror SKILLS_DIR, or both")
+        ap.error("give a VARIANT.tex, --mirror SKILLS_DIR, or --check-setup")
     if a.mirror:
         check_mirror(a.mirror)
     if not a.tex:
         return report()
+
+    max_pages = a.max_pages or int(cfg.get("max_pages") or 2)
+    base_path = a.base
+    if not base_path:
+        cfg_base = os.path.expanduser(cfg.get("base_resume") or "")
+        if cfg_base and os.path.exists(cfg_base):
+            base_path = cfg_base
+
+    skills_only_re = compile_word_list_regex(cfg.get("skills_only"))
+    off_surface_re = compile_word_list_regex(cfg.get("off_surface"))
+    tagline_parts = set(cfg.get("tagline_parts") or [])
+    noun_allowlist = tuple(cfg.get("noun_opening_allowlist") or [])
+    do_not_write = [
+        (item["pattern"], item["reason"]) if isinstance(item, dict) else tuple(item)
+        for item in (cfg.get("do_not_write") or [])
+    ]
+    custom_scope_fails = [
+        (item["pattern"], item.get("gate", "scope"), item["reason"])
+        if isinstance(item, dict)
+        else tuple(item)
+        for item in (cfg.get("custom_scope_fails") or [])
+    ]
 
     tex_path = os.path.abspath(a.tex)
     d, name = os.path.split(tex_path)
@@ -333,9 +381,9 @@ def main():
     info = run(["pdfinfo", pdf], d).stdout
     pages = int(re.search(r"Pages:\s+(\d+)", info).group(1))
     record(
-        "PASS" if pages <= a.max_pages else "FAIL",
+        "PASS" if pages <= max_pages else "FAIL",
         "render",
-        f"{pages} page(s) (limit {a.max_pages})",
+        f"{pages} page(s) (limit {max_pages})",
     )
     if pages >= 2:
         p2 = run(["pdftotext", "-layout", "-f", "2", "-l", "2", pdf, "-"], d).stdout.splitlines()
@@ -428,14 +476,15 @@ def main():
         ]
         if len(parts) != 3:
             record("WARN", "tagline", f"tagline has {len(parts)} part(s), not 3: {parts}")
-        unknown = [p for p in parts[1:] if p not in TAGLINE_PARTS]
-        if unknown:
-            record(
-                "WARN",
-                "tagline",
-                f"part(s) not in bullet-craft.md's list (a near-duplicate, or a new "
-                f"part to add once approved): {unknown}",
-            )
+        if tagline_parts:
+            unknown = [p for p in parts[1:] if p not in tagline_parts]
+            if unknown:
+                record(
+                    "WARN",
+                    "tagline",
+                    f"part(s) not in tagline_parts (a near-duplicate, or a new "
+                    f"part to add once approved): {unknown}",
+                )
     summ0 = plain(summary_of(body))
     if m and summ0.startswith("Senior") and not re.search(r"\b(?:Senior|Sr)\b", m.group(1)):
         record(
@@ -486,7 +535,7 @@ def main():
         if PROCESS_END.search(t):
             record("WARN", "shape", f"bullet {n}: ends on process, not an outcome: …{t[-70:]}")
         first = re.sub(r"^[^A-Za-z]*", "", t).split(" ")[0].lower().strip(",.")
-        if any(t.startswith(prefix) for prefix in NOUN_OPENING_ALLOWLIST):
+        if any(t.startswith(prefix) for prefix in noun_allowlist):
             continue
         if first and not (first.endswith("ed") or first in IRREGULAR):
             record("WARN", "shape", f"bullet {n}: opens with '{first}', not a past-tense verb: {short}")
@@ -502,22 +551,24 @@ def main():
     if not summary:
         record("WARN", "scope", "couldn't isolate the summary; check it by eye for skills-only terms")
     flat_body = " ".join(plain(body).split())
-    so = sorted({m.group(0) for t in items + [summary] for m in SKILLS_ONLY.finditer(plain(t))})
-    record(
-        "PASS" if not so else "FAIL",
-        "scope",
-        "skills-only terms stay in the skills list"
-        if not so
-        else f"skills-only term(s) in a bullet or the summary: {so}",
-    )
-    off = sorted({m.group(0) for m in OFF_SURFACE.finditer(flat_body)})
-    if off:
-        record("FAIL", "scope", f"not on the verified stack surface (evidence bank): {off}")
-    for rx, why in DO_NOT_WRITE:
+    if skills_only_re:
+        so = sorted({m.group(0) for t in items + [summary] for m in skills_only_re.finditer(plain(t))})
+        record(
+            "PASS" if not so else "FAIL",
+            "scope",
+            "skills-only terms stay in the skills list"
+            if not so
+            else f"skills-only term(s) in a bullet or the summary: {so}",
+        )
+    if off_surface_re:
+        off = sorted({m.group(0) for m in off_surface_re.finditer(flat_body)})
+        if off:
+            record("FAIL", "scope", f"not on the verified stack surface (off_surface): {off}")
+    for rx, why in do_not_write:
         dm = re.search(rx, flat_body, re.I)
         if dm:
             record("FAIL", "scope", f"'{dm.group(0)}': {why}")
-    for rx, gate_name, why in CUSTOM_SCOPE_FAILS:
+    for rx, gate_name, why in custom_scope_fails:
         cm = re.search(rx, flat_body, re.I)
         if cm:
             record("FAIL", gate_name, f"'{cm.group(0)}': {why}")
@@ -529,15 +580,13 @@ def main():
         record("WARN", "shape", "'orchestrated': only for literal workflow orchestration (bullet-craft.md banlist)")
 
     # ---- metric preservation vs base ----
-    if a.base:
-        bbody = body_of(open(a.base, encoding="utf-8").read())
+    if base_path and os.path.exists(base_path):
+        bbody = body_of(open(base_path, encoding="utf-8").read())
         base_m = {norm_metric(x) for x in METRIC.findall(metric_src(bbody))}
         var_m = {norm_metric(x) for x in METRIC.findall(metric_src(body))}
         lost = sorted(base_m - var_m)
         new = sorted(var_m - base_m)
-        bank_p = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "..", "references", "evidence-bank.md"
-        )
+        bank_p = os.path.join(SKILL_DIR, "references", "evidence-bank.md")
         if new and os.path.exists(bank_p):
             bank_n = norm_metric(metric_src(open(bank_p, encoding="utf-8").read()))
             new = [x for x in new if x not in bank_n]
@@ -553,7 +602,6 @@ def main():
                 "evidence",
                 f"metrics in neither the base nor the evidence bank (confirm with user): {new}",
             )
-        # every parenthetical attribution the base carries survives (gate 1)
         for par in sorted(set(re.findall(r"\((?:senior|staff)-led[^)]*\)", bbody))):
             if par not in body:
                 record(

@@ -23,18 +23,20 @@ Most AI resume tailoring fails in four predictable ways:
 ```text
 resume-tailor/
 ├── README.md                          # Overview, prerequisites, and quickstart
-├── HOW_TO_CUSTOMIZE.md                # Step-by-step guide to adapting the skill to your resume
+├── HOW_TO_CUSTOMIZE.md                # 3-step customization guide
 ├── LICENSE                            # MIT License
 ├── templates/
 │   └── Candidate_Name_Resume.tex      # Clean, ATS-verified LaTeX base resume template
 └── resume-tailor/                     # The Claude Code skill directory (copy/symlink to ~/.claude/skills/)
     ├── SKILL.md                       # Main skill workflow and non-negotiable rules
+    ├── config.example.json            # Tracked config template (copied/generated to config.json)
     ├── references/
     │   ├── bullet-craft.md            # Register, sentence shape, verb ceiling, banlist, ATS rules, 4 gates
     │   ├── evidence-bank.md           # Template for verified claims, attribution ceilings, and stack tiers
     │   ├── recent-applications.md     # Sibling application index by role type for reusing proven bullets
     │   └── fetching.md                # Fallback steps when a job posting URL blocks automated fetches
     └── scripts/
+        ├── init_profile.py            # Auto-generates config.json & evidence-bank.md from your base .tex
         ├── check_variant.py           # Mechanical compiler + ATS/scope/metric/shape verification gate
         └── find_posting.py            # Optional lookup helper for local job-search-pipeline caches
 ```
@@ -65,16 +67,20 @@ resume-tailor/
    cd resume-tailor
    ```
 
-2. **Follow [`HOW_TO_CUSTOMIZE.md`](HOW_TO_CUSTOMIZE.md)** to:
+2. **Bootstrap your configuration in one command (see [`HOW_TO_CUSTOMIZE.md`](HOW_TO_CUSTOMIZE.md)):**
    - Copy `templates/Candidate_Name_Resume.tex` to `~/Documents/resumes/<Your_Name>_Resume.tex` and fill in your resume.
-   - Populate `resume-tailor/references/evidence-bank.md` with your projects, attribution ceilings, and 3-tier technology stack.
-   - Update the `CANDIDATE CUSTOMIZATION SECTION` at the top of `resume-tailor/scripts/check_variant.py`.
+   - Run `init_profile.py` to auto-generate `resume-tailor/config.json` and a pre-filled `resume-tailor/references/evidence-bank.md` straight from your `.tex` bullets:
+     ```bash
+     python3 resume-tailor/scripts/init_profile.py \
+       --resume ~/Documents/resumes/<Your_Name>_Resume.tex \
+       --write-evidence-bank --force
+     ```
+   - Review `resume-tailor/config.json` (`skills_only`, `off_surface`, `do_not_write`) and add your scope ceilings in `resume-tailor/references/evidence-bank.md`.
 
-3. **Test the mechanical gate against your base resume:**
+3. **Verify your setup and test the mechanical gate:**
    ```bash
-   python3 resume-tailor/scripts/check_variant.py \
-     ~/Documents/resumes/<Your_Name>_Resume.tex \
-     --base ~/Documents/resumes/<Your_Name>_Resume.tex
+   python3 resume-tailor/scripts/check_variant.py --check-setup
+   python3 resume-tailor/scripts/check_variant.py ~/Documents/resumes/<Your_Name>_Resume.tex
    ```
 
 4. **Install the skill into Claude Code:**

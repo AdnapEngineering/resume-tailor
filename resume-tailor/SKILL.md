@@ -27,7 +27,12 @@ mostly re-ordering and re-pointing. A good pass rewrites few bullets.
 
 ## Where things are
 
-**Reference files**, next to this `SKILL.md`:
+**Reference files & config**, next to this `SKILL.md`:
+- `config.json` (copied or generated from `config.example.json` via
+  `scripts/init_profile.py`): holds `base_resume`, `output_dir`,
+  `variant_filename`, `max_pages`, `skills_only`, `off_surface`,
+  `do_not_write`, `tagline_parts`, and `excluded_companies`. Read it first so
+  you know where the user's files live.
 - `references/bullet-craft.md`: register, sentence shape, verb ceiling,
   banlist, metrics, tagline parts, skills-row rules, ATS rules, and the four
   gates. Read it before rewriting any bullet.
@@ -42,8 +47,10 @@ mostly re-ordering and re-pointing. A good pass rewrites few bullets.
   thesis, and gap decisions. Read the two tables at the top, then grep only
   the sibling's entry; don't read the whole file.
 - `references/fetching.md`: what to do when a posting won't load.
-- `scripts/check_variant.py`: the mechanical gates (step 8) and the mirror
-  check.
+- `scripts/check_variant.py`: the mechanical gates (step 8), `--check-setup`,
+  and the mirror check.
+- `scripts/init_profile.py`: one-command bootstrap that parses the user's
+  base `.tex` resume to generate `config.json` and draft `evidence-bank.md`.
 - `scripts/find_posting.py`: optional lookup script if using a local
   job-search pipeline cache.
 

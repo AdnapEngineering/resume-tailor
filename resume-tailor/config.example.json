@@ -1,0 +1,102 @@
+{
+  "_comment": "Copy this file to resume-tailor/config.json (or ~/.config/resume-tailor/config.json) and edit it. None of the Python scripts need to be edited directly.",
+  "base_resume": "~/Documents/resumes/Candidate_Name_Resume.tex",
+  "output_dir": "~/Documents/resumes",
+  "variant_filename": "Candidate_Name_resume.tex",
+  "max_pages": 2,
+  "skills_only": [
+    "Python",
+    "Cypress",
+    "Storybook",
+    "Docker",
+    "GitHub Actions",
+    "Astro",
+    "Tailwind",
+    "design tokens",
+    "Confluence",
+    "PHP",
+    "Reactive Forms",
+    "Module Federation",
+    "SCSS",
+    "Jira",
+    "Linux",
+    "Git",
+    "Copilot",
+    "Kafka"
+  ],
+  "off_surface": [
+    "Vite",
+    "Vitest",
+    "Redux",
+    "Kubernetes",
+    "React Native",
+    "Flutter",
+    "Golang",
+    "NestJS",
+    "Spring Boot",
+    "Sentry",
+    "TanStack",
+    "Zustand",
+    "Turborepo",
+    "esbuild",
+    "Rollup",
+    "NVDA",
+    "JAWS",
+    "Section 508",
+    "VPAT",
+    "MUI",
+    "Material UI",
+    "Shopify",
+    "Relay"
+  ],
+  "do_not_write": [
+    {
+      "pattern": "\\bProjectTitan\\b",
+      "reason": "internal product codename; write \"enterprise billing platform\""
+    },
+    {
+      "pattern": "\\bled a team of\\b|\\bmanag(?:ed|ing) (?:a team|\\d+|three)\\b",
+      "reason": "team ceiling is \"led frontend\", never managed or led a team of"
+    },
+    {
+      "pattern": "\\barchitected (?:the|a|its) (?:[\\w-]+ ){0,2}(?:platform|architecture)\\b",
+      "reason": "\"architected\" covers only the specific components built, never the broader platform"
+    }
+  ],
+  "custom_scope_fails": [
+    {
+      "pattern": "(?-i:\\bPython\\b)(?! \\(scripting\\))",
+      "gate": "scope",
+      "reason": "'Python' must be written as 'Python (scripting)'"
+    }
+  ],
+  "tagline_parts": [
+    "AI-Assisted Development",
+    "Test Automation & Quality",
+    "Test Automation & CI/CD",
+    "Web Performance & Accessibility",
+    "Web Performance & Reliability",
+    "Web Performance",
+    "Web Performance & Architecture",
+    "End-to-End Product Features",
+    "Frontend Platform & DX",
+    "Product Experimentation",
+    "A/B Experimentation & Funnels",
+    "Observability & Reliability",
+    "Code Review & Mentorship",
+    "API & Service Development",
+    "Accessibility & UI Quality",
+    "Feature-Flag Rollouts",
+    "Growth & Experimentation",
+    "Frontend Platform",
+    "Payments Product Engineering",
+    "Onboarding & Multi-Step Forms",
+    "Distributed Systems & Scalability",
+    "Cloud Infrastructure & DevOps",
+    "Data Pipelines & Analytics"
+  ],
+  "noun_opening_allowlist": [
+    "Sole technical owner"
+  ],
+  "excluded_companies": []
+}
