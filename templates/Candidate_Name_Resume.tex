@@ -1,0 +1,147 @@
+% Candidate_Name_Resume.tex — Canonical Base Resume Template
+% Copy to ~/Documents/resumes/<First_Last>_Resume.tex and customize with your background.
+
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[hmargin=0.50in,top=1.0in,bottom=0.50in]{geometry}
+\setlength{\headheight}{32pt}
+\setlength{\headsep}{\dimexpr 0.2in + 1pt\relax}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{needspace}
+\usepackage{eso-pic}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{calc}
+\usepackage[colorlinks=true,urlcolor=linkblue,linkcolor=linkblue]{hyperref}
+\usepackage[T1]{fontenc}
+\usepackage{charter}
+\usepackage{microtype}
+\pdfgentounicode=1
+\emergencystretch=1.5em
+% Prevent tech keywords from hyphenating across line breaks (which splits them in ATS text extraction)
+\hyphenation{React Playwright DynamoDB Lighthouse PostgreSQL PagerDuty LaunchDarkly GraphQL TypeScript JavaScript observability parallelized integration Mentored reviewer}
+
+\definecolor{gold}{HTML}{B7950B}
+\definecolor{linkblue}{HTML}{0563C1}
+\definecolor{rulegold}{HTML}{B7950B}
+
+\linespread{1.05}
+\setlength{\parindent}{0pt}
+\raggedbottom
+
+\hypersetup{
+	pdftitle={Alex Rivera --- Senior Full-Stack Software Engineer},
+	pdfauthor={Alex Rivera}
+}
+
+% ---------- Gold accent bars (top of every page) ----------
+\AddToShipoutPictureBG{%
+	\AtPageUpperLeft{%
+		\put(0,-17.28){\color{gold}\rule{\paperwidth}{0.24in}}%
+	}%
+}
+\newcommand{\goldbars}{}
+
+% ---------- Page style: bars on every page; name header on p.2+ ----------
+\fancypagestyle{firstpage}{%
+	\fancyhf{}\renewcommand{\headrulewidth}{0pt}%
+	\fancyhead[C]{\goldbars}}
+\fancypagestyle{contpage}{%
+	\fancyhf{}\renewcommand{\headrulewidth}{0pt}%
+	\fancyhead[C]{\goldbars\vspace*{0.4in}\parbox{\textwidth}{%
+			{\centering\fontsize{21pt}{25pt}\selectfont Alex Rivera\par}\vspace{4pt}
+			{\noindent\small 555-019-2834 \,$\vert$\,
+				\href{mailto:alex.rivera@example.com}{alex.rivera@example.com} \,$\vert$\,
+				\href{https://www.linkedin.com/in/alex-rivera-example/}{linkedin.com/in/alex-rivera-example} \,$\vert$\,
+				\href{https://github.com/alex-rivera-example}{github.com/alex-rivera-example}\hfill Page \thepage\par}}}%
+}
+\pagestyle{contpage}
+
+% ---------- Centered section head with side rules ----------
+\newcommand{\sectionhead}[1]{%
+	\par\vspace{12pt}%
+	\noindent\makebox[\textwidth]{%
+		\color{rulegold}\rule[0.55ex]{0.16\textwidth}{0.7pt}\hfill
+		{\color{black}\fontsize{13pt}{15pt}\selectfont\bfseries #1}\hfill
+		\color{rulegold}\rule[0.55ex]{0.16\textwidth}{0.7pt}}%
+	\par\vspace{6pt}}
+
+% ---------- Role header ----------
+% \company{NAME}{Location}   \roleline{Title}{extra}{dates}
+% dates take a single ASCII hyphen (08/2023 - 06/2026): `--` renders as an en-dash that ATS imports drop
+\newcommand{\company}[2]{\par\needspace{6\baselineskip}\vspace{8pt}{\MakeUppercase{#1} \,$\vert$\, #2}\par\vspace{2pt}}
+\newcommand{\roleline}[3]{{\textbf{#1}#2 \hfill #3}\par\vspace{2pt}}
+\newcommand{\scopeline}[1]{{\itshape #1}\par\vspace{1pt}}
+
+% ---------- Tight bullets ----------
+\setlist[itemize]{leftmargin=1.15em, itemsep=4pt, parsep=0pt, topsep=4pt, label=\textbullet}
+
+\newcommand{\til}{\textasciitilde}
+
+\begin{document}
+	\thispagestyle{firstpage}
+	\vspace*{\dimexpr -0.9in - 1pt\relax}
+
+	% ---------- Header ----------
+	\begin{center}
+		{\fontsize{21pt}{25pt}\selectfont Alex Rivera}\\[3pt]
+		{\small Seattle, WA \,$\cdot$\, Open to remote \,$\vert$\, 555-019-2834 \,$\vert$\,
+			\href{mailto:alex.rivera@example.com}{alex.rivera@example.com} \,$\vert$\,
+			\href{https://www.linkedin.com/in/alex-rivera-example/}{linkedin.com/in/alex-rivera-example} \,$\vert$\,
+			\href{https://github.com/alex-rivera-example}{GitHub}}
+	\end{center}
+
+	\sectionhead{Senior Full-Stack Software Engineer}
+	\begingroup\centering
+	{\normalsize\bfseries Full-Stack (React \,$\cdot$\, TypeScript \,$\cdot$\, GraphQL) \,$\vert$\, End-to-End Product Features \,$\vert$\, Web Performance \& Reliability}\par
+	\endgroup\vspace{2pt}
+
+	Full-stack software engineer with 6 years of experience owning web products end to end (UI through APIs and data), including 4 years shipping React and TypeScript applications backed by GraphQL and REST services on AWS. Led frontend for a multi-tenant enterprise billing platform from zero through GA, drove an 18\% checkout conversion lift via A/B testing, and cut p95 LCP by 1.4s. Solo-built a GraphQL and PostgreSQL notification-routing service with a zero-downtime database cutover, and authored agent skills for Claude Code, adopted team-wide.
+
+	\sectionhead{Technical Proficiencies}
+	\begingroup\fontsize{10.5pt}{12pt}\selectfont
+	\renewcommand{\arraystretch}{1.15}
+	\noindent\begin{tabularx}{\textwidth}{@{}>{\bfseries\raggedleft\arraybackslash}p{\widthof{\bfseries Growth \& Observability}}@{\hspace{8pt}}>{\raggedright\arraybackslash}X@{}}
+		Frontend & TypeScript, JavaScript (ES6+), React, Next.js, Apollo Client, HTML5/CSS3/SCSS, state management, responsive layout, Astro (SSR)\\
+		Frontend Platform & Micro-frontends, design systems \& component libraries (Storybook, Figma, design tokens), web performance (Core Web Vitals, code splitting, lazy loading), webpack, WCAG \& ARIA\\
+		Backend \& APIs & Node.js/Express, GraphQL (schema design \& resolvers), RESTful APIs, API contract design, microservices, webhooks, WebSockets, Python (scripting), authentication/SSO\\
+		Databases \& Cloud & SQL (PostgreSQL, MySQL), NoSQL (DynamoDB), data modeling \& schema design, query optimization, AWS (Lambda/serverless, ECS, EC2, S3, Athena), Docker \& Compose\\
+		Testing \& CI/CD & Jest, Playwright (page objects, async E2E), Cypress, React Testing Library, unit/integration/API/E2E regression \& failure-path testing, GitLab CI, GitHub Actions, Git\\
+		Growth \& Observability & A/B testing, analytics instrumentation, activation \& retention funnels, feature-flag rollouts (LaunchDarkly), Mixpanel, Segment, Datadog (RUM, tracing, dashboards), PagerDuty\\
+		AI \& LLM & Claude Code, GitHub Copilot, LLM pipeline integration, MCP tooling, agent skill authoring\\
+	\end{tabularx}\par
+	\endgroup
+
+	\sectionhead{Professional Experience}
+
+	\company{Acme Cloud Systems}{Seattle, WA (remote)}
+	\roleline{Senior Software Engineer,}{ Product \& Platform}{08/2023 - 06/2026}
+	\roleline{Software Engineer,}{ Growth \& Checkout}{04/2022 - 08/2023}
+	\begin{itemize}
+		\item {\bfseries Enterprise Platform:} Led frontend for a multi-tenant enterprise billing platform from zero through MVP and GA on an 8-engineer team, owning the customer admin portal (React, TypeScript) and internal operations micro-frontend. Authored frontend design docs, defined API contracts with backend engineers, and reviewed code for 3 frontend engineers.
+		\item {\bfseries Growth \& Experimentation:} Owned full-stack checkout and onboarding flows (React, TypeScript, GraphQL); shipped the checkout redesign that lifted cart-to-paid conversion 18\% across 200,000+ monthly users, validated through analytics instrumentation, LaunchDarkly A/B tests, and Mixpanel cohort analysis.
+		\item {\bfseries Backend Services:} Designed and solo-built a configurable notification-routing service (GraphQL and REST, PostgreSQL) replacing a legacy hardcoded rules engine, and defined its GraphQL schema, REST API contracts, and relational data model; backfilled from MySQL with a zero-downtime staged cutover, turning \til 5 weekly deploy-bound tickets into \mbox{5--10-minute} self-serve config changes.
+		\item {\bfseries Web Performance \& Architecture:} Cut p95 Largest Contentful Paint (LCP) by 1.4s into Google's ``good'' range across customer-facing surfaces (Datadog RUM) via bundle audits, route-level lazy loading, image optimization, Apollo Client caching, and batched GraphQL queries. Built 2 React micro-frontends (staff-led platform initiative) and upgraded shared packages across major React versions.
+		\item {\bfseries Data Integrity:} Shipped automated webhook deduplication and payload validation across payment ingestion endpoints, catching 500+ malformed or duplicate events per week; used PostgreSQL and AWS Athena to audit and reconcile 4,000+ historical account records.
+		\item {\bfseries AI \& Automation:} Authored agent skills for Claude Code, adopted across the team, that scaffold unit tests, review frontend changes before merge, generate GraphQL resolvers and REST endpoints across repos, and triage production alerts with Athena queries, cutting a \til 2-hour on-call investigation to \mbox{10--15 minutes}.
+		\item {\bfseries Engineering Standards:} Raised test coverage from \til 40\% to a CI-enforced 80\% baseline across unit, integration, E2E, and failure-path tests (Jest, React Testing Library, Playwright on P0/P1 paths) adopted team-wide, and established the team's WCAG accessibility practice. Mentored junior engineers, interviewed engineering candidates, and served as the go-to React architecture reviewer.
+		\item {\bfseries Authentication:} Pitched Google SSO from a support-cost case, then led its frontend build and flag-gated rollout across signup and sign-in, partnering with a staff engineer on identity linking; owned the account-collision UX and the A/B test showing \til 60\% fewer password resets than non-SSO signups.
+		\item {\bfseries Observability \& On-Call:} Built frontend observability (Datadog RUM/tracing and dashboards, custom UI error events, Slack/PagerDuty alerting) and P0 runbooks, served on primary on-call, and ran cross-team Operational Excellence reviews of incident root causes and mitigations.
+	\end{itemize}
+
+	\company{Northstar Digital Studio}{Seattle, WA}
+	\roleline{Full-Stack Web Developer}{}{09/2020 - 03/2022}
+	\begin{itemize}
+		\item Architected and deployed 3 custom full-stack web applications (including a B2B client portal on a TypeScript, Node.js/Express REST API and PostgreSQL with relational schema design) as sole technical owner from CI/CD setup through production handoff.
+		\item Grew client organic traffic by \til 40\% and reached 95+ Lighthouse performance and accessibility scores by re-architecting frontend rendering, responsive layouts, and technical SEO.
+	\end{itemize}
+
+	\sectionhead{Education}
+	\begingroup\centering
+	{\bfseries Bachelor of Science, Computer Science} \,$\vert$\, State University \,$\vert$\, Seattle, WA\par
+	\endgroup
+
+\end{document}
